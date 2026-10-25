@@ -101,6 +101,7 @@ export const en: Dict = {
   'err.tooManyCracks': 'Up to 30 cracked tiles.',
   'title.cheatTease': 'Hints are locked. Old-school players know the way in.',
   'title.cheatOn': 'Hints unlocked',
+  'title.cheatOff': 'Turn hints off',
   'play.stuckLocked': 'Stuck? Try imprinting somewhere else.',
   'cheat.on': "No 30 lives, but you've got hints now.",
   'win.title': 'Cleared',

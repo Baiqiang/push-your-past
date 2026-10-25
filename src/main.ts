@@ -28,6 +28,30 @@ async function main() {
 
   // 秘籍：上上下下左右左右 BA，解锁提示（存档记住）
   const applyCheats = () => document.body.classList.toggle('hints-on', !!data.cheats);
+  /** 标题页底下那行：没解锁时是一句暗示；解锁后显示“提示已解锁”和一个关掉的按钮 */
+  const renderCheatLines = () => {
+    for (const el of app.querySelectorAll<HTMLElement>('.cheat-line')) {
+      clear(el);
+      if (!data.cheats) {
+        el.append(t('title.cheatTease'));
+        continue;
+      }
+      el.append(
+        t('title.cheatOn'),
+        ' ',
+        h('button.btn.link-btn', {
+          onclick: () => {
+            // 回到输入秘籍之前：提示藏起来，小兵重新演秘籍；再输一次秘籍就又打开了
+            data.cheats = false;
+            save(data);
+            applyCheats();
+            renderCheatLines();
+            sfx.play('cancel');
+          },
+        }, t('title.cheatOff')),
+      );
+    }
+  };
   applyCheats();
   bindCheat(
     () => {
@@ -36,7 +60,7 @@ async function main() {
       save(data);
       applyCheats();
       sfx.play('win');
-      for (const el of app.querySelectorAll('.cheat-line')) el.textContent = t('title.cheatOn');
+      renderCheatLines();
       toast(document.querySelector<HTMLElement>('.screen.active') ?? app, t('cheat.on'));
     },
     // 手机滑动只在标题页认，免得和游戏里的滑动移动混在一起
@@ -160,7 +184,7 @@ async function main() {
           h('button.btn', { onclick: () => (sfx.play('ui'), openSelect()) }, t('title.levels')),
           h('button.btn', { onclick: () => (sfx.play('ui'), openEditor()) }, t('title.editor')),
         ),
-        h('div.cheat-line', { 'aria-live': 'polite' }, t(data.cheats ? 'title.cheatOn' : 'title.cheatTease')),
+        h('div.cheat-line', { 'aria-live': 'polite' }),
       ),
     );
 
@@ -169,6 +193,7 @@ async function main() {
     view.attach(parking);
     clear(app);
     app.append(title, select.el, play.el, editor.el);
+    renderCheatLines();
     show(title);
   }
 

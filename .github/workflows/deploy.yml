@@ -1,9 +1,9 @@
-# 推到 main 就自动：装依赖 → 类型检查 + 构建 → 跑测试 → 发布到 GitHub Pages
+# 推到 master 就自动：装依赖 → 类型检查 + 构建 → 跑测试 → 发布到 GitHub Pages
 name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 permissions:

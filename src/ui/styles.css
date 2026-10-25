@@ -65,6 +65,7 @@ button { font: inherit; color: inherit; }
 body:not(.hints-on) .hint-btn { display: none; }
 .cheat-line { margin-top: 28px; font-size: 13px; color: var(--dim); opacity: .7; }
 body.hints-on .cheat-line { color: var(--gold); opacity: 1; }
+.btn.link-btn { padding: 2px 10px; font-size: 12px; min-height: 0; margin-left: 6px; color: var(--dim); }
 .title-screen { touch-action: none; }
 
 /* 彩蛋小兵：铺在页面最下方，不挡点击 */

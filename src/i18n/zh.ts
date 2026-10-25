@@ -101,6 +101,7 @@ export const zh = {
   'err.tooManyCracks': '裂地最多 30 格。',
   'title.cheatTease': '提示被锁起来了。老玩家应该知道怎么打开。',
   'title.cheatOn': '提示已解锁',
+  'title.cheatOff': '关掉提示',
   'play.stuckLocked': '卡住了？换个地方留影试试。',
   'cheat.on': '30 条命没有，提示倒是有了。',
   'win.title': '过关',
