@@ -163,6 +163,21 @@ describe('新机关', () => {
     expect(runActions({ ...lv(map), presets: ['RRR'] }, 'W').state.world.ghosts[0].pos).toBe(9);
   });
 
+  it('受控残影（▶ 开头）：▶ 压着才走，松开就停，进度不前进', () => {
+    // 残影在 (1,1) 往右走；你在 (1,2)，▶ 在 (2,2)
+    const map = ['########', '#1.....#', '#@r....#', '########'];
+    const def = { ...lv(map), presets: ['▶RRRR'] };
+    expect(runActions(def, 'W').state.world.ghosts[0].ip).toBe(0); // 没压着：不走
+    // 你第 1 步站上 ▶；第 2、3 步开始时压着，残影走两步；第 3 步你离开，第 4 步开始时没压着，停下
+    const r = runActions(def, 'RWLW');
+    const g = r.state.world.ghosts[0];
+    expect(g.ip).toBe(2);
+    expect(g.pos).toBe(11);
+    // 再踩上去，接着从第 3 个动作走
+    const g2 = runActions(def, 'RWLWRW').state.world.ghosts[0];
+    expect(g2.ip).toBe(3);
+  });
+
   it('传送门：走进一端从另一端出来，推东西也一样', () => {
     const map = ['########', '#@(#)..#', '########'];
     const r = runActions(lv(map), 'R');

@@ -98,7 +98,7 @@ function randomLevel(r: () => number): Def {
   if (r() < 0.3) {
     const before = cells.join('');
     put('1');
-    if (cells.join('') !== before) presets = [(r() < 0.3 ? '⏸' : '') + Array.from({ length: 1 + Math.floor(r() * 3) }, () => 'URDLW'[Math.floor(r() * 5)]).join('')];
+    if (cells.join('') !== before) presets = [(r() < 0.25 ? '⏸' : r() < 0.35 ? '▶' : '') + Array.from({ length: 1 + Math.floor(r() * 3) }, () => 'URDLW'[Math.floor(r() * 5)]).join('')];
   }
   const rows = ['#'.repeat(w + 2)];
   for (let y = 0; y < h; y++) rows.push('#' + cells.slice(y * w, y * w + w).join('') + '#');

@@ -1,7 +1,7 @@
 import { Action, ownGhosts, parseActions, replayTimeline, Session } from '../core/game';
 import { starCount, stars, starText } from './stars';
 import { GameState, LevelDef, WAIT } from '../core/types';
-import { step } from '../core/sim';
+import { isReleasing, step } from '../core/sim';
 
 const PREVIEW_STEPS = 5;
 import { sfx } from '../audio/sfx';
@@ -262,7 +262,7 @@ export class PlayScreen {
     this.recBtn.textContent = t(rec ? 'play.stop' : 'play.rec');
     this.recBtn.classList.toggle('on', rec);
     this.renderHud();
-    renderTimeline(this.timeline, st, s.def.maxRecord);
+    renderTimeline(this.timeline, st, s.def.maxRecord, s.board);
     this.updatePreview();
   }
 
@@ -280,7 +280,7 @@ export class PlayScreen {
     for (const g of w.ghosts) {
       const done = g.ip >= g.program.length;
       const label = t(g.preset ? 'play.echo' : 'play.shadow', { n: ghostNumber(g, w.ghosts) });
-      const value = g.gone ? t('play.erased') : g.waiting ? t('play.waiting') : done ? t('play.idle') : t('hud.ghostProgress', { a: g.ip, b: g.program.length });
+      const value = g.gone ? t('play.erased') : g.waiting ? t('play.waiting') : g.gated && g.ip < g.program.length && !isReleasing(s.board, w) ? t('play.paused') : done ? t('play.idle') : t('hud.ghostProgress', { a: g.ip, b: g.program.length });
       this.hud.append(stat(label, value, done ? '.dim' : '', hex(ghostColor(g, w.ghosts))));
     }
     if (st.rec) {
@@ -381,7 +381,7 @@ export class PlayScreen {
         kind: 'compare',
         ghosts: own.map((g) => ({ color: ghostColor(g, finalWorld.ghosts), planned: g.recPath, actual: actual.get(g.id)! })),
       });
-      renderTimeline(this.timeline, { world: f.world, rec: null }, s.def.maxRecord);
+      renderTimeline(this.timeline, { world: f.world, rec: null }, s.def.maxRecord, s.board);
       this.renderHud({ world: f.world, rec: null });
       if (++i < frames.length) this.demoTimer = window.setTimeout(show, i === 1 ? 600 : 380);
       else this.demoTimer = 0;

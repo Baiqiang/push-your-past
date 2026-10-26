@@ -19,6 +19,7 @@ export const CHAPTERS: Chapter[] = [
   { id: 9, title: '裂地', subtitle: '踩过就塌。影子掉进坑里，就没了。' },
   { id: 10, title: '传送门', subtitle: '从一头进去，从另一头出来。' },
   { id: 11, title: '待命', subtitle: '影子可以先等着，等有人踩下释放板再出发。' },
+  { id: 12, title: '走走停停', subtitle: '有的残影只在 ▶ 被压着时走，一松开就停。' },
 ];
 
 export { LEVELS };

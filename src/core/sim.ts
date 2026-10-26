@@ -20,6 +20,7 @@ import { Board, DX, DY, Dir, GATE_NOW, GATE_PAST, Ghost, Instr, SimEvent, Tile, 
  *     推东西时，被推者同样会穿过传送门。
  *   - 待命 / 释放：从待命台 H 留下的影子先不动（不消耗步数）。每一步开始时，
  *     只要释放板 r 上有东西，所有待命的影子就从这一步起开始走，之后不再停。
+ *   - 受控残影（动作串以 ▶ 开头）：每一步开始时释放板上有东西才走这一步，没有就原地停、进度不前进。
  *   以上规则在 solver.ts 里有一份整数版实现，两边必须一致（tests/solver.test.ts 对拍）。
  */
 
@@ -184,6 +185,7 @@ export function step(board: Board, world: World, playerInstr: Instr, opts: StepO
   for (let gi = 0; gi < world.ghosts.length; gi++) {
     const g = src[gi];
     if (g.waiting) continue; // 待命中
+    if (g.gated && !released) continue; // 受控残影：▶ 没压着，这一步不走
     if (g.ip >= g.program.length || gpos[gi] < 0) continue; // 演完了，或者这一步里已经被推进坑
     const instr = g.program[g.ip];
     let res: 'ok' | 'blocked' | 'wait' = 'wait';

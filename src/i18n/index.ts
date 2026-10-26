@@ -60,6 +60,7 @@ const CHAPTER_EN: Record<number, [string, string]> = {
   9: ["Fault Lines", "Collapsed ground swallows the past. Rewinding restores it."],
   10: ["Portals", "In one end, out the other."],
   11: ["On Hold", "A shadow can wait until someone steps on the release plate."],
+  12: ["Stop and Go", "Some echoes only move while ▶ is held down, and stop the moment it's released."],
 };
 
 export function chapterText(ch: Chapter): { title: string; subtitle: string } {

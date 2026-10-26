@@ -1,10 +1,11 @@
-import { GameState, INSTR_ARROWS } from '../core/types';
+import { isReleasing } from '../core/sim';
+import { Board, GameState, INSTR_ARROWS } from '../core/types';
 import { t } from '../i18n';
 import { ghostColor, ghostNumber, hex, THEME } from '../render/theme';
 import { clear, h } from './dom';
 
 /** 侧栏：每个影子要走的每一步、现在走到哪了、哪一步被挡住了 */
-export function renderTimeline(el: HTMLElement, s: GameState, maxRecord: number): void {
+export function renderTimeline(el: HTMLElement, s: GameState, maxRecord: number, board?: Board): void {
   clear(el);
   const w = s.world;
   if (!w.ghosts.length && !s.rec) {
@@ -14,7 +15,7 @@ export function renderTimeline(el: HTMLElement, s: GameState, maxRecord: number)
   for (const g of w.ghosts) {
     const c = hex(ghostColor(g, w.ghosts));
     const label = t(g.preset ? 'play.echo' : 'play.shadow', { n: ghostNumber(g, w.ghosts) });
-    const status = g.gone ? t('play.erased') : g.waiting ? t('play.waiting') : g.ip >= g.program.length ? t('play.idle') : `${g.ip}/${g.program.length}`;
+    const status = g.gone ? t('play.erased') : g.waiting ? t('play.waiting') : g.gated && g.ip < g.program.length && board && !isReleasing(board, w) ? t('play.paused') : g.ip >= g.program.length ? t('play.idle') : `${g.ip}/${g.program.length}`;
     const chips = g.program.map((ins, k) => {
       const res = g.log[k];
       const cls = ['chip'];

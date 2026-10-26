@@ -2,6 +2,8 @@ import { Board, GATE_NOW, GATE_PAST, Ghost, Instr, LevelDef, MAX_CRACKS, Tile, W
 
 /** 残影动作串的前缀：开局待命，等释放板 */
 export const PRESET_HOLD = '⏸';
+/** 残影动作串的前缀：只在释放板被压着时才走，半路松开就停 */
+export const PRESET_GATED = '▶';
 
 export function parseProgram(s: string): Instr[] {
   const out: Instr[] = [];
@@ -19,7 +21,8 @@ export function parseProgram(s: string): Instr[] {
  *   @  玩家        + 玩家在目标上  E 出口
  *   a-d 压力板     A-D 门（同字母联动，E 被出口占用）
  *   ^ > v <  单向格，只能沿箭头方向进入
- *   1-9 预设影子出生点（动作串见 LevelDef.presets；动作串以 ⏸ 开头表示它开局就待命）
+ *   1-9 预设影子出生点（动作串见 LevelDef.presets；以 ⏸ 开头表示开局待命，
+ *       以 ▶ 开头表示只在释放板被压着的那几步才走）
  *   S  过去之闸：只有影子能过     Y  现在之闸：只有你能过（箱子都过不去）
  *   %  裂地：上面的东西离开后塌成坑（回溯后复原）。你和箱子过不去；影子掉进去就被抹除
  *   ( )  传送门：成对出现，走进一端从另一端出来
@@ -120,7 +123,8 @@ export function parseLevel(def: Pick<LevelDef, 'map' | 'presets'>): ParsedLevel 
     if (!program.length) throw new Error('PRESET_EMPTY:' + (k + 1));
     // 残影的编号占了地图上那一格，没法再写 H，所以用动作串开头的 ⏸ 表示“开局待命”
     const waiting = presets[k].startsWith(PRESET_HOLD);
-    ghosts.push({ id: k, pos, program, ip: 0, recPath: [pos], log: [], preset: true, born: 0, waiting });
+    const gated = presets[k].startsWith(PRESET_GATED);
+    ghosts.push({ id: k, pos, program, ip: 0, recPath: [pos], log: [], preset: true, born: 0, waiting, gated });
   }
   // 地图上放了数字却没写动作
   for (let k = presets.length; k < presetPos.length; k++) if (presetPos[k] !== undefined) throw new Error('PRESET_EMPTY:' + (k + 1));

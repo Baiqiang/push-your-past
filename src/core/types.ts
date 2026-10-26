@@ -90,6 +90,8 @@ export interface Ghost {
   gone?: boolean;
   /** 待命中：还没被释放，原地不动（仍有碰撞，可以被推） */
   waiting?: boolean;
+  /** 只在 ▶ 被压着的那几步才走（残影专用）：没压着就原地停下，进度不前进 */
+  gated?: boolean;
 }
 
 export type StepResult = 'ok' | 'blocked' | 'wait';

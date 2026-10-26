@@ -1,5 +1,5 @@
 import { Application, BlurFilter, Container, Graphics } from 'pixi.js';
-import { doorStates } from '../core/sim';
+import { doorStates, isReleasing } from '../core/sim';
 import { Board, GameState, SimEvent } from '../core/types';
 import { CELL, drawBox, drawCracks, drawGhost, drawPlayer, drawStatic, drawSwitches } from './draw';
 import { ghostColor, THEME } from './theme';
@@ -159,7 +159,7 @@ export class BoardView {
       const next = g.ip < g.program.length ? g.program[g.ip] : null;
       const color = ghostColor(g, w.ghosts);
       const echo = !!g.preset;
-      const waiting = !!g.waiting;
+      const waiting = !!g.waiting || (!!g.gated && g.ip < g.program.length && !isReleasing(board, w));
       place('g' + g.id, g.pos, `g${next}${echo}${color}${waiting}`, (gr, glow) => drawGhost(gr, color, next, glow, echo, waiting));
     });
     w.boxes.forEach((b, i) => {

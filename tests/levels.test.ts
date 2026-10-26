@@ -19,6 +19,8 @@ function replay(def: LevelDef) {
   const blocks: string[] = [];
   let slices = 0;
   let released = 0;
+  // 受控残影每一步走没走：m 走了，. 没走（▶ 没压着）
+  const gatedTrace: Record<number, string> = {};
   const norm = (id: string) => (id[0] === 'b' ? 'b' : id);
   for (const a of parseActions(def.solution ?? '')) {
     if (a === 'rec' && s.world.ghosts.some((g) => g.ip > 0 && g.ip < g.program.length)) slices++;
@@ -26,6 +28,10 @@ function replay(def: LevelDef) {
     const r = applyAction(board, def, s, a);
     if (!r.ok) throw new Error(`${def.id}: 动作 ${a} 无效 (${r.reason})`);
     if (r.kind === 'beat' && !r.state.rec) {
+      before.ghosts.forEach((g, i) => {
+        if (!g.gated || g.ip >= g.program.length) return;
+        gatedTrace[i] = (gatedTrace[i] ?? '') + (r.state.world.ghosts[i].ip > g.ip ? 'm' : '.');
+      });
       const pos = new Map<string, number>([['p', before.player]]);
       before.boxes.forEach((b, k) => pos.set('b' + k, b));
       before.ghosts.forEach((g) => pos.set('g' + g.id, g.pos));
@@ -48,7 +54,9 @@ function replay(def: LevelDef) {
     }
     s = r.state;
   }
-  return { won: isWon(board, s), ghosts: s.world.ghosts.length, gone: s.world.ghosts.filter((g) => g.gone).length, released, pushes, blocks, slices };
+  // 半路停过：先走了至少一步，之后有一步没走，再之后又走了
+  const pausedMidway = Object.values(gatedTrace).some((tr) => /m\.+m/.test(tr));
+  return { won: isWon(board, s), ghosts: s.world.ghosts.length, gone: s.world.ghosts.filter((g) => g.gone).length, released, pausedMidway, pushes, blocks, slices };
 }
 
 /** 每章的核心交互：参考解里要出现（sanity），且关掉它以后求解器证明无解（必要性） */
@@ -72,6 +80,7 @@ const CHAPTER_CHECK: Record<number, [string, (t: ReturnType<typeof replay>) => b
   9: ['影子落坑被抹除', (t) => t.gone >= 1, []],
   10: ['传送门', (t) => t.ghosts >= 1, []],
   11: ['待命的影子被释放板放出来', (t) => t.released >= 1, []],
+  12: ['受控残影半路停过又接着走', (t) => t.pausedMidway, []],
 };
 
 /**
@@ -94,6 +103,9 @@ const MAP_ABL: Record<string, MapAbl[]> = {
   '11-1': [{ from: 'H', to: '.', expect: 'unsolvable' }, { from: 'r', to: '.', expect: 'unsolvable' }],
   '11-2': [{ from: 'H', to: '.', expect: 'unsolvable' }, { from: 'r', to: '.', expect: 'unsolvable' }],
   '11-3': [{ from: 'H', to: '.', expect: 'unsolvable' }, { from: 'r', to: '.', expect: 'unsolvable' }],
+  // r 换成地板：受控残影永远不走
+  '12-1': [{ from: 'r', to: '.', expect: 'unsolvable' }],
+  '12-2': [{ from: 'r', to: '.', expect: 'unsolvable' }],
 };
 const substitute = (map: string[], from: string, to: string) => map.map((r) => [...r].map((c) => (from.includes(c) ? to : c)).join(''));
 
@@ -145,6 +157,13 @@ describe('关卡结构', () => {
 
   it('文案不用术语', () => {
     for (const l of LEVELS) expect(l.name + l.hint + (l.hints ?? []).join(''), l.id).not.toMatch(/拍|指令|Ghost|锚点|封存|录|收束/);
+    // 门和机关按颜色说（地图上只看得到颜色），不出现字母 A / a 这类说法
+    for (const l of LEVELS) expect(l.hint + (l.hints ?? []).join(''), l.id).not.toMatch(/(?<![A-Za-z])[a-dA-D](?![A-Za-z])/);
+    // 英文：A / a 也是冠词，所以只查“door A”“plate a”以及单独的 b、c、B、C、D
+    for (const [id, e] of Object.entries(LEVEL_TEXT_EN)) {
+      const txt = e.hint + ' ' + (e.hints ?? []).join(' ');
+      expect(txt, id).not.toMatch(/\b(door|plate) [a-dA-D]\b|(?<![A-Za-z\\])[b-dB-D](?![A-Za-z])/i);
+    }
     // 待命台 / 释放板在文案里用 ⏸ / ▶ 表示，不出现地图字母 H、r
     for (const l of LEVELS) expect(l.hint + (l.hints ?? []).join(''), l.id).not.toMatch(/(?<![A-Za-z])[Hr](?![A-Za-z])/);
     for (const [id, e] of Object.entries(LEVEL_TEXT_EN)) expect(e.hint + (e.hints ?? []).join(' '), id).not.toMatch(/(?<![A-Za-z])[Hr](?![A-Za-z])/);
@@ -226,6 +245,20 @@ function releasers(def: LevelDef): string[] {
   }
   return who;
 }
+
+// 第 12 章：“半路停下”是必需的。去掉 ▶ 前缀（一开局就走、不停）或换成 ⏸（只能决定何时出发、出发后不停）都无解
+describe.each(LEVELS.filter((l) => l.chapter === 12).map((l) => [l.id, l] as const))('第 12 章 %s：受控残影必须半路停', (_id, level) => {
+  const swap = (to: string) => ({ ...level, presets: level.presets!.map((p) => (p.startsWith('▶') ? to + p.slice(1) : p)) });
+  it('有受控残影', () => {
+    expect(level.presets!.some((p) => p.startsWith('▶'))).toBe(true);
+  });
+  it('换成照常出发的残影就无解', () => {
+    expect(solve(swap('')).status).toBe('unsolvable');
+  });
+  it('换成只能等一次的残影（⏸）也无解', () => {
+    expect(solve(swap('⏸')).status).toBe('unsolvable');
+  });
+});
 
 describe('第 11 章：放人的是谁', () => {
   // 11-2：你挡了残影一步，它改道走过 r；11-3：你留的影子去踩 r，放出另一个影子

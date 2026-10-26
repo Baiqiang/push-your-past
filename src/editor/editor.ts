@@ -1,45 +1,47 @@
 import { initialState } from '../core/game';
-import { parseLevel, PRESET_HOLD } from '../core/level';
+import { parseLevel, PRESET_GATED, PRESET_HOLD } from '../core/level';
 import { LevelDef } from '../core/types';
 import { sfx } from '../audio/sfx';
 import { BoardView } from '../render/board';
+import { toolIcon } from '../render/icons';
 import { clear, h, toast } from '../ui/dom';
 import { errorText, t } from '../i18n';
 import type { SolveMessage, SolveRequest } from './solver.worker';
 
 interface Tool {
   ch: string;
-  label: string;
+  /** 完整名字：提示框和读屏用 */
   name: () => string;
+  /** 图标下面的小字（不写就用 name） */
+  short?: () => string;
 }
 
 /** '1' 表示“放一个新残影”，实际写入的数字由编辑器分配 */
 const ECHO = '1';
 /** 传送门工具：第一下放 (，第二下放 )，最多一对 */
 const PORTAL = 'O';
+// 机关和门按颜色区分（地图上就是这么画的），不再用字母
+const COLORS = ['pink', 'blue', 'green'] as const;
 const TOOLS: Tool[] = [
-  { ch: '#', label: '▉', name: () => t('editor.tool.wall') },
-  { ch: '.', label: '·', name: () => t('editor.tool.floor') },
-  { ch: ' ', label: '⌫', name: () => t('editor.tool.erase') },
-  { ch: '@', label: '☺', name: () => t('editor.tool.player') },
-  { ch: '$', label: '▣', name: () => t('editor.tool.box') },
-  { ch: '_', label: '◇', name: () => t('editor.tool.goal') },
-  { ch: 'E', label: '⬚', name: () => t('editor.tool.exit') },
-  { ch: ECHO, label: '⌜⌟', name: () => t('editor.tool.echo') },
-  ...['a', 'b', 'c'].flatMap((c) => [
-    { ch: c, label: c, name: () => t('editor.tool.plate', { c }) },
-    { ch: c.toUpperCase(), label: c.toUpperCase(), name: () => t('editor.tool.door', { c: c.toUpperCase() }) },
+  { ch: '#', name: () => t('editor.tool.wall') },
+  { ch: '.', name: () => t('editor.tool.floor') },
+  { ch: ' ', name: () => t('editor.tool.erase') },
+  { ch: '@', name: () => t('editor.tool.player') },
+  { ch: '$', name: () => t('editor.tool.box') },
+  { ch: '_', name: () => t('editor.tool.goal') },
+  { ch: 'E', name: () => t('editor.tool.exit') },
+  { ch: ECHO, name: () => t('editor.tool.echo') },
+  ...(['a', 'b', 'c'] as const).flatMap((c, i) => [
+    { ch: c, name: () => t('editor.tool.plate', { c: t(`color.${COLORS[i]}`) }), short: () => t('editor.tool.plateShort') },
+    { ch: c.toUpperCase(), name: () => t('editor.tool.door', { c: t(`color.${COLORS[i]}`) }), short: () => t('editor.tool.doorShort') },
   ]),
-  { ch: 'S', label: 'S', name: () => t('editor.tool.gatePast') },
-  { ch: 'Y', label: 'Y', name: () => t('editor.tool.gateNow') },
-  { ch: '%', label: '%', name: () => t('editor.tool.crack') },
-  { ch: PORTAL, label: '◎', name: () => t('editor.tool.portal') },
-  { ch: 'H', label: '⏸', name: () => t('editor.tool.hold') },
-  { ch: 'r', label: '▶', name: () => t('editor.tool.release') },
-  { ch: '^', label: '↑', name: () => t('editor.tool.oneway') },
-  { ch: '>', label: '→', name: () => t('editor.tool.oneway') },
-  { ch: 'v', label: '↓', name: () => t('editor.tool.oneway') },
-  { ch: '<', label: '←', name: () => t('editor.tool.oneway') },
+  { ch: 'S', name: () => t('editor.tool.gatePast') },
+  { ch: 'Y', name: () => t('editor.tool.gateNow') },
+  { ch: '%', name: () => t('editor.tool.crack') },
+  { ch: PORTAL, name: () => t('editor.tool.portal') },
+  { ch: 'H', name: () => t('editor.tool.hold') },
+  { ch: 'r', name: () => t('editor.tool.release') },
+  ...(['^', '>', 'v', '<'] as const).map((ch, i) => ({ ch, name: () => t('editor.tool.oneway') + ' ' + '↑→↓←'[i], short: () => t('editor.tool.oneway') })),
 ];
 const isDigit = (c: string) => c >= '1' && c <= '9';
 
@@ -82,8 +84,14 @@ export class EditorScreen {
     this.out = h('div.solver-out', {}, t('editor.solver.intro'));
     this.modal = h('div.modal-back');
 
+    // 图标用地图上同样的画法生成，视觉和关卡里一致
     const toolBtns = TOOLS.map((tl) =>
-      h('button.btn.tool' + (tl.ch === this.tool ? '.sel' : ''), { title: tl.name(), 'aria-label': tl.name(), 'data-ch': tl.ch, onclick: () => this.pick(tl.ch) }, tl.label, h('small', {}, tl.name())),
+      h(
+        'button.btn.tool' + (tl.ch === this.tool ? '.sel' : ''),
+        { title: tl.name(), 'aria-label': tl.name(), 'data-ch': tl.ch, onclick: () => this.pick(tl.ch) },
+        h('img', { src: toolIcon(this.view.app.renderer, tl.ch), alt: '', draggable: 'false' }),
+        h('small', {}, (tl.short ?? tl.name)()),
+      ),
     );
     this.presetBox = h('div.stack');
     const field = (label: string, el: HTMLElement) => h('div.field', {}, h('label', {}, label), el);
@@ -280,12 +288,21 @@ export class EditorScreen {
     clear(this.presetBox);
     if (!this.presets.length) return void this.presetBox.append(h('div.solver-out', {}, t('editor.echoes.none')));
     this.presets.forEach((prog, i) => {
-      const held = prog.startsWith(PRESET_HOLD);
-      const inp = h('input.wide', { value: held ? prog.slice(PRESET_HOLD.length) : prog, 'aria-label': t('play.echo', { n: i + 1 }), spellcheck: 'false' }) as HTMLInputElement;
-      // 开局待命：切换动作串前面的 ⏸
-      const hold = h('button.btn.icon-btn.toggle' + (held ? '.on' : ''), { title: t('editor.echo.hold'), 'aria-label': t('editor.echo.hold'), 'aria-pressed': held ? 'true' : 'false' }, '⏸');
+      // 出发方式：照常走 / ⏸ 开局待命 / ▶ 只在释放板压着时走。点按钮在三种之间切换
+      const modes = ['', PRESET_HOLD, PRESET_GATED];
+      let mode = prog.startsWith(PRESET_HOLD) ? 1 : prog.startsWith(PRESET_GATED) ? 2 : 0;
+      const inp = h('input.wide', { value: prog.slice(modes[mode].length), 'aria-label': t('play.echo', { n: i + 1 }), spellcheck: 'false' }) as HTMLInputElement;
+      const hold = h('button.btn.icon-btn.toggle');
+      const paint = () => {
+        const label = t(mode === 0 ? 'editor.echo.modeNormal' : mode === 1 ? 'editor.echo.hold' : 'editor.echo.gated');
+        hold.textContent = mode === 2 ? '▶' : '⏸';
+        hold.classList.toggle('on', mode !== 0);
+        hold.title = label;
+        hold.setAttribute('aria-label', label);
+      };
+      paint();
       const sync = () => {
-        this.presets[i] = (hold.classList.contains('on') ? PRESET_HOLD : '') + inp.value;
+        this.presets[i] = modes[mode] + inp.value;
         this.solution = undefined;
       };
       inp.addEventListener('input', () => {
@@ -293,8 +310,8 @@ export class EditorScreen {
         sync();
       });
       hold.addEventListener('click', () => {
-        hold.classList.toggle('on');
-        hold.setAttribute('aria-pressed', hold.classList.contains('on') ? 'true' : 'false');
+        mode = (mode + 1) % 3;
+        paint();
         sync();
         this.redraw(false);
       });

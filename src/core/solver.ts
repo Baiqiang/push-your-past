@@ -210,10 +210,13 @@ export function solve(def: Def, opts: SolveOptions = {}): SolveResult {
     GW[i] = world.ghosts[i].waiting ? 1 : 0;
   }
   /** 释放：这一步开始时释放板上有东西，待命的影子都开始走（和 sim.ts 的 isReleasing 一致） */
+  const gated = world.ghosts.map((g) => !!g.gated); // 只有残影会有，位置固定在前 np 个
+  let pressed = false; // 这一步开始时释放板上有没有东西
   const releaseNow = () => {
     let on = board.release[P] === 1;
     for (let i = 0; i < nb && !on; i++) if (board.release[B[i]]) on = true;
     for (let i = 0; i < ng && !on; i++) if (GP[i] !== GONE && board.release[GP[i]]) on = true;
+    pressed = on;
     if (on) for (let i = 0; i < ng; i++) GW[i] = 0;
   };
   const keys: string[] = [encode()];
@@ -282,6 +285,7 @@ export function solve(def: Def, opts: SolveOptions = {}): SolveResult {
     if (GP[i] === GONE) return beat(i + 1, i < np ? code : code + WAIT * mul, i < np ? mul : mul * base);
     save(i);
     if (i < np) {
+      if (gated[i] && !pressed) return beat(i + 1, code, mul); // 受控残影：这一步不走
       const ins = presets[i][ip0];
       GI[i] = ip0 + 1;
       if (ins !== WAIT) tryMove(1000 + i, ins);
