@@ -11,6 +11,7 @@ export const en: Dict = {
 
   'select.heading': 'Levels',
   'select.progress': '{n}/{total} cleared',
+  'select.allStars': 'Every level here has 3 stars',
   'select.meta': 'Up to {g} shadow(s) · {r} steps each',
   'select.meta.noRec': 'No imprints available',
   'select.meta.solved': '{g} shadow(s) · {b} steps',

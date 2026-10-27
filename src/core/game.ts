@@ -38,8 +38,15 @@ export type ApplyResult =
   | { ok: true; state: GameState; events: SimEvent[]; kind: 'beat' | 'rec' | 'seal' | 'cancel' }
   | { ok: false; reason: 'noop' | 'ghost-limit' | 'record-limit' | 'not-recording' | 'empty' };
 
-/** 玩家自己录出来的影子数（不含预设影子） */
+/** 场上还在的、你自己留的影子数（不含残影；掉进坑被抹除的不算，名额会空出来） */
 export function ownGhosts(w: World): number {
+  let n = 0;
+  for (const g of w.ghosts) if (!g.preset && !g.gone) n++;
+  return n;
+}
+
+/** 这条时间线上你一共留过几个影子（含已被抹除的）。星级“最少影子”按这个算 */
+export function usedGhosts(w: World): number {
   let n = 0;
   for (const g of w.ghosts) if (!g.preset) n++;
   return n;

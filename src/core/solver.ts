@@ -27,6 +27,13 @@ export interface SolveOptions {
   /** 覆盖关卡的影子上限（例如验证“少一个影子就无解”） */
   maxGhosts?: number;
   maxRecord?: number;
+  /**
+   * 一共最多留几个影子（含掉坑被抹除、名额又空出来的）。只有带裂地的关会出现回收，
+   * 默认比 maxGhosts 多 3 个，算是求解器的搜索上限。
+   */
+  maxTotal?: number;
+  /** 消融：被抹除的影子仍占名额（不能回收） */
+  forbidRecycle?: boolean;
   onProgress?: (nodes: number) => void;
   /** 消融：禁止这些推动，例如 ['p>g'] 表示玩家不能推影子 */
   forbidPush?: `${Kind}>${Kind}`[];
@@ -87,9 +94,11 @@ export function solve(def: Def, opts: SolveOptions = {}): SolveResult {
   let P = 0;
   const B = new Int32Array(nb);
   let ng = 0;
-  const GP = new Int32Array(np + maxGhosts + 1);
-  const GI = new Int32Array(np + maxGhosts + 1);
-  const GW = new Uint8Array(np + maxGhosts + 1); // 待命中
+  const maxTotal = opts.maxTotal ?? maxGhosts + (board.crackCells.length && !opts.forbidRecycle ? 3 : 0);
+  const forbidRecycle = !!opts.forbidRecycle;
+  const GP = new Int32Array(np + maxTotal + 1);
+  const GI = new Int32Array(np + maxTotal + 1);
+  const GW = new Uint8Array(np + maxTotal + 1); // 待命中
   const WAITBIT = 0x8000; // 编码时把“待命”塞进位置的最高位
   let BR = 0; // 已塌的裂地（位掩码）
   let bad = false;
@@ -233,7 +242,7 @@ export function solve(def: Def, opts: SolveOptions = {}): SolveResult {
   const markDone = (id: number) => ((done[id >> 16] ??= new Uint8Array(65536))[id & 0xffff] = 1);
   let anyActive = false;
   // 每层递归的现场快照
-  const depth = np + maxGhosts + 2;
+  const depth = np + maxTotal + 2;
   const sP = new Int32Array(depth);
   const sB = Array.from({ length: depth }, () => new Int32Array(nb));
   const sG = Array.from({ length: depth }, () => new Int32Array(depth));
@@ -323,7 +332,10 @@ export function solve(def: Def, opts: SolveOptions = {}): SolveResult {
     cur = id;
     const ng0 = ng;
     let child = -1;
-    if (ng0 - np < maxGhosts) {
+    // 名额：场上还在的影子 < maxGhosts（被抹除的不占名额），且总数没超上限
+    let alive = 0;
+    for (let i = np; i < ng0; i++) if (forbidRecycle || GP[i] !== GONE) alive++;
+    if (alive < maxGhosts && ng0 - np < maxTotal) {
       let mid = false;
       if (forbidSlice) for (let i = 0; i < ng0; i++) if (GI[i] > 0 && GI[i] < len(i)) mid = true;
       if (!mid) {
@@ -400,8 +412,10 @@ export function computePar(def: Def, opts: SolveOptions = {}): Par | null {
   const full = solve(def, opts);
   if (full.status !== 'solved') return null;
   const steps = runActions(def, full.solution).state.world.tick;
-  for (let k = 0; k <= def.maxGhosts; k++) {
-    const r = k === def.maxGhosts ? full : solve(def, { ...opts, maxGhosts: k });
+  // 最少用几个影子：按“一共留过几个”算（回收的也算），逐个放宽总数上限
+  const cap = opts.maxTotal ?? def.maxGhosts + 3;
+  for (let k = 0; k <= cap; k++) {
+    const r = solve(def, { ...opts, maxGhosts: Math.min(def.maxGhosts, k), maxTotal: k });
     if (r.status === 'limit') return null;
     if (r.status === 'solved') return { ghosts: k, steps };
   }

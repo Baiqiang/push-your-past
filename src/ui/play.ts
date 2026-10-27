@@ -1,4 +1,4 @@
-import { Action, ownGhosts, parseActions, replayTimeline, Session } from '../core/game';
+import { Action, ownGhosts, parseActions, replayTimeline, Session, usedGhosts } from '../core/game';
 import { starCount, stars, starText } from './stars';
 import { GameState, LevelDef, WAIT } from '../core/types';
 import { isReleasing, step } from '../core/sim';
@@ -292,7 +292,7 @@ export class PlayScreen {
   private win(): void {
     const s = this.session!;
     const beats = s.state.world.tick;
-    const ghosts = ownGhosts(s.state.world);
+    const ghosts = usedGhosts(s.state.world);
     sfx.play('win');
     this.view.flash('win');
     this.view.burstAt(s.state.world.player, THEME.exit, 40, 240);

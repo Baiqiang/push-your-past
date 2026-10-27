@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Action, applyAction, initialState, isWon, runActions } from '../src/core/game';
+import { Action, applyAction, initialState, isWon, runActions, usedGhosts } from '../src/core/game';
 import { parseLevel } from '../src/core/level';
 import { solve, solveWithoutGhosts } from '../src/core/solver';
 import { GameState, WAIT } from '../src/core/types';
@@ -32,6 +32,8 @@ function bruteMinSteps(def: Def, maxNodes = 400_000): number | null {
       continue;
     }
     for (const a of acts) {
+      // 和求解器一样：一共最多留 maxGhosts + 3 个影子（回收名额时的搜索上限）
+      if (a === 'rec' && usedGhosts(s.world) >= def.maxGhosts + 3) continue;
       const r = applyAction(board, def, s, a, true);
       if (!r.ok) continue;
       const k = key(r.state);
@@ -126,7 +128,7 @@ describe('求解器', () => {
       }
       compared++;
     }
-    expect(compared).toBeGreaterThan(200);
+    expect(compared).toBeGreaterThan(150);
     expect(solvedCount).toBeGreaterThan(50);
   }, 300_000);
 

@@ -2,7 +2,7 @@ import { LevelDef } from '../core/types';
 import { CHAPTERS, LEVELS } from '../levels';
 import { SaveData } from '../storage';
 import { clear, h } from './dom';
-import { stars, starText } from './stars';
+import { starCount, stars, starText } from './stars';
 import { chapterText, levelName, t } from '../i18n';
 
 export interface SelectHooks {
@@ -37,8 +37,15 @@ export class SelectScreen {
   render(save: SaveData): void {
     clear(this.list);
     const done = LEVELS.filter((l) => save.solved[l.id]).length;
+    // 星星统计：每关最多 3 颗（过关 + 影子数达标 + 步数达标）
+    const starsOf = (ls: typeof LEVELS) => ls.reduce((n, l) => n + starCount(stars(l.par, save.solved[l.id])), 0);
+    const got = starsOf(LEVELS);
+    const max = LEVELS.length * 3;
     clear(this.progress);
-    this.progress.append(t('select.progress', { n: done, total: LEVELS.length }));
+    this.progress.append(
+      t('select.progress', { n: done, total: LEVELS.length }),
+      h('span.star-total' + (got === max ? '.full' : ''), {}, `★ ${got}/${max}`),
+    );
 
     for (const ch of CHAPTERS) {
       const levels = LEVELS.filter((l) => l.chapter === ch.id);
@@ -58,7 +65,17 @@ export class SelectScreen {
         h(
           'div.chapter',
           {},
-          h('h3', {}, h('span.num', {}, String(ch.id).padStart(2, '0')), chapterText(ch).title),
+          h(
+            'h3',
+            {},
+            h('span.num', {}, String(ch.id).padStart(2, '0')),
+            chapterText(ch).title,
+            (() => {
+              const g = starsOf(levels);
+              const m = levels.length * 3;
+              return h('span.ch-stars' + (g === m ? '.full' : ''), { title: g === m ? t('select.allStars') : undefined }, `★ ${g}/${m}`);
+            })(),
+          ),
           h('p', {}, chapterText(ch).subtitle),
           h('div.cards', {}, ...cards),
         ),

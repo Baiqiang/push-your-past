@@ -200,34 +200,34 @@ export const LEVEL_TEXT_EN: Record<string, { name: string; hint: string; hints?:
   },
   '8-1': {
     name: "Admitted",
-    hint: "S is a past-only gate: shadows pass, you and boxes do not. Walking into it while imprinting is fine. On replay, your past walks straight through.",
+    hint: "The purple dashed frame is a past-only gate: shadows pass, you and boxes do not. Walking into it while imprinting is fine. On replay, your past walks straight through.",
     hints: [
-      "The pink plate is behind S. You cannot get through. Your past can.",
-      "Imprint directly below S and press up twice. Both will hit the gate.",
-      "After rewinding, go right. It passes S and steps onto the pink plate, and the pink door opens.",
+      "The pink plate is behind the purple gate. You cannot get through. Your past can.",
+      "Imprint directly below the purple gate and press up twice. Both will hit the gate.",
+      "After rewinding, go right. It passes the purple gate and steps onto the pink plate, and the pink door opens.",
     ],
   },
   '8-2': {
     name: "ID Check",
-    hint: "Y is a present-only gate: only you may pass. Shadows, echoes and boxes may not.",
+    hint: "The solid cyan frame is a present-only gate: only you may pass. Shadows, echoes and boxes may not.",
     hints: [
-      "The echo is heading for the exit. Y stops it. Y does not stop you.",
+      "The echo is heading for the exit. The cyan gate stops it. It does not stop you.",
       "The pink door needs the pink plate held down. Imprint one tile left of it. One step is enough.",
-      "After rewinding, go up through the pink door and through Y. The echo stays on the other side.",
+      "After rewinding, go up through the pink door and through the cyan gate. The echo stays on the other side.",
     ],
   },
   '8-3': {
     name: "Split Routes",
-    hint: "S lets only shadows through. Y lets only you through. Each takes its own door.",
+    hint: "The purple gate lets only shadows through. The cyan gate lets only you through. Each takes its own door.",
     hints: [
-      "The box is right of S. Pushing it from the S side is something only a shadow can do.",
-      "The first shadow holds the pink plate so you can enter the pink door. Make the second inside that door and send it through S to push the box one tile right.",
-      "Then push the box onto the pink plate, go up around through Y, and push it down onto \u25c7 from above.",
+      "The box is right of the purple gate. Pushing it from the gate side is something only a shadow can do.",
+      "The first shadow holds the pink plate so you can enter the pink door. Make the second inside that door and send it through the purple gate to push the box one tile right.",
+      "Then push the box onto the pink plate, go up around through the cyan gate, and push it down onto \u25c7 from above.",
     ],
   },
   '9-1': {
     name: "Collapse",
-    hint: "% is cracked floor. Once everything on it has left, it collapses into a pit. You and boxes cannot enter a pit. A shadow or echo that falls in is erased, and its remaining moves are void. Rewinding restores the floor.",
+    hint: "The ground with cracks in it is cracked floor. Once everything on it has left, it collapses into a pit. You and boxes cannot enter a pit. A shadow or echo that falls in is erased, and its remaining moves are void. Rewinding restores the floor.",
     hints: [
       "Left alone, the echo ends up on the exit and stays there.",
       "The echo collapses the crack itself. The pit is just left of where it started.",
@@ -252,9 +252,18 @@ export const LEVEL_TEXT_EN: Record<string, { name: string; hint: string; hints?:
       "Imprint at the left end of the upper passage: wait one step, then right. After rewinding, press right twice. On the second press your shadow pushes you one tile further.",
     ],
   },
+  '9-4': {
+    name: "Use and Toss",
+    hint: "Only one shadow can be on the field at a time here. But a shadow that falls into a pit is gone, and its slot frees up, so you can leave another.",
+    hints: [
+      "The pink door and the blue door each need a shadow holding a plate, and you can only have one at a time.",
+      "Once the first shadow has held the pink plate, you need to get rid of it. The cracked floor turns into a pit after it collapses. Let it walk back and fall in.",
+      "Imprint right away: wait, right, wait, down onto the pink plate, up, right. After the rewind keep walking right. It gives you a push, the crack collapses, it holds the plate while you pass, then walks back into the pit. Above the blue plate, leave another shadow that steps down.",
+    ],
+  },
   '10-1': {
     name: "Shortcut",
-    hint: "( and ) are a pair of portals. Step into one and you land on the other. Anything pushed into one does the same.",
+    hint: "The two orange rings are a pair of portals. Step into one and you land on the other. Anything pushed into one does the same.",
     hints: [
       "The pink plate is on the other side of the wall. The only way there is through the portal.",
       "Imprint at the start and walk right through the portal.",
@@ -298,21 +307,30 @@ export const LEVEL_TEXT_EN: Record<string, { name: string; hint: string; hints?:
     ],
   },
   '12-1': {
-    name: "Stop and Go",
-    hint: "An echo marked ▶ only moves while ▶ is held down. Step off and it stops right where it is, then carries on the next time ▶ is pressed. The pink door needs it on the pink plate, the blue door needs it on the blue plate.",
+    name: "Be the Wall",
+    hint: "Echoes marked ▶ only move while ▶ is held down: stand on ▶ and they take a step; step off and they stop where they are. The echo up top walks over the pink plate. Find a way to make it stop there.",
     hints: [
-      "Hold ▶ the whole time and it walks straight over both plates. You only make it through one door.",
-      "Step on the first ▶ so it takes one step and stops on the pink plate. Then leave it there.",
-      "After the pink door, stay on the second ▶ for one extra step so it moves onto the blue plate. Then keep going right.",
+      "The echo up top keeps walking right and leaves the pink plate behind. Something has to stand in its way.",
+      "The ▶ echo below walks up past the crossing on that upper path. Stop it right at the crossing and it becomes a wall.",
+      "Stand on ▶ for two steps and step off on the third. It stops at the crossing, the echo up top is held on the pink plate, and the pink door stays open.",
     ],
   },
   '12-2': {
-    name: "Tap, Tap",
-    hint: "▶ sits in a little pit below. Going down to press it means leaving the main path. Let your shadow press it for you. When it presses and when it lets go is up to the shadow.",
+    name: "One Step More",
+    hint: "Two ▶ echoes share one ▶. Press it and they both take a step; let go and they both stop. Pressing and releasing alone can't land them on their plates at the same time.",
     hints: [
-      "The echo has to stop on the pink plate while you pass the pink door, then move to the blue plate for the blue door. It needs to pause once in between.",
-      "Imprint right above ▶. Your shadow needs to press it, step off, then press it again. Three steps.",
-      "Imprint: down, up, down, then rewind. After that just walk right. Both doors are open when you get there.",
+      "The pink one needs 4 steps to its plate, the blue one only 3. Press 3 times and pink is one short; press 4 and blue is one too far.",
+      "Give the pink one a free step: push it from behind. The cyan gate only lets you through, and it leads around behind it.",
+      "Press ▶ once so both move forward a step. Then go through the cyan gate, get behind the pink one and push it one tile. Come back and press ▶ twice: both stop right on their plates.",
+    ],
+  },
+  '12-3': {
+    name: "One Step Short",
+    hint: "Two ▶ echoes moving together again. This time the pink one goes one tile too far, so pushing won't help. You have to block it for a step.",
+    hints: [
+      "The top one reaches the pink plate in 3 steps, the bottom one needs 4 to reach the blue plate. And you have to pass the blue door before the pink one.",
+      "The pink one has to take one step fewer, so block it: the step still counts, but it doesn't move. The cyan gate only lets you through, and it leads onto its path.",
+      "Press 3 times so the pink one stops on its plate. Then imprint on the tile in front of it, step up once and rewind, and your shadow stays there blocking it. Go back and press ▶ once more: the bottom echo reaches the blue plate and both doors are open.",
     ],
   },
 };

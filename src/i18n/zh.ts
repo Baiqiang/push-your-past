@@ -11,6 +11,7 @@ export const zh = {
 
   'select.heading': '选关',
   'select.progress': '已过 {n}/{total}',
+  'select.allStars': '这一章全三星',
   'select.meta': '最多 {g} 个影子 · 每段 {r} 步',
   'select.meta.noRec': '这关不能留影',
   'select.meta.solved': '{g} 个影子 · {b} 步',

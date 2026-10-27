@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Action, applyAction, initialState, isWon, parseActions } from '../src/core/game';
+import { runActions, Action, applyAction, initialState, isWon, parseActions } from '../src/core/game';
 import { parseLevel } from '../src/core/level';
 import { computePar, solve, SolveOptions, solveWithoutGhosts } from '../src/core/solver';
 import { DX, DY, GameState, LevelDef, WAIT } from '../src/core/types';
@@ -54,8 +54,12 @@ function replay(def: LevelDef) {
     }
     s = r.state;
   }
-  // 半路停过：先走了至少一步，之后有一步没走，再之后又走了
-  const pausedMidway = Object.values(gatedTrace).some((tr) => /m\.+m/.test(tr));
+  // 半路停过：先走了至少一步，之后有一步没走，再之后又走了；
+  // 或者走了几步就停住，到通关时动作还没走完（停在半路当墙，12-2 就是这样）
+  const pausedMidway = Object.entries(gatedTrace).some(([i, tr]) => {
+    const g = s.world.ghosts[+i];
+    return /m\.+m/.test(tr) || (/m\./.test(tr) && g.ip < g.program.length);
+  });
   return { won: isWon(board, s), ghosts: s.world.ghosts.length, gone: s.world.ghosts.filter((g) => g.gone).length, released, pausedMidway, pushes, blocks, slices };
 }
 
@@ -80,7 +84,7 @@ const CHAPTER_CHECK: Record<number, [string, (t: ReturnType<typeof replay>) => b
   9: ['影子落坑被抹除', (t) => t.gone >= 1, []],
   10: ['传送门', (t) => t.ghosts >= 1, []],
   11: ['待命的影子被释放板放出来', (t) => t.released >= 1, []],
-  12: ['受控残影半路停过又接着走', (t) => t.pausedMidway, []],
+  12: ['受控残影半路停下', (t) => t.pausedMidway, []],
 };
 
 /**
@@ -97,6 +101,7 @@ const MAP_ABL: Record<string, MapAbl[]> = {
   '9-1': [{ from: '%', to: '#', expect: 'unsolvable' }, { from: '%', to: '.', expect: 'unsolvable' }],
   '9-2': [{ from: '%', to: '#', expect: 'unsolvable' }, { from: '%', to: '.', expect: 'unsolvable' }],
   '9-3': [{ from: '%', to: '#', expect: 'unsolvable' }],
+  '9-4': [{ from: '%', to: '#', expect: 'unsolvable' }, { from: '%', to: '.', expect: 'unsolvable' }],
   '10-1': [{ from: '()', to: '#', expect: 'unsolvable' }, { from: '()', to: '.', expect: 'unsolvable' }],
   '10-2': [{ from: '()', to: '#', expect: 'unsolvable' }, { from: '()', to: '.', expect: 'unsolvable' }],
   // H 换成地板：影子回溯后立刻出发（相当于只能在留影里等，受步数上限限制）；r 换成地板：影子永远不出发
@@ -105,7 +110,8 @@ const MAP_ABL: Record<string, MapAbl[]> = {
   '11-3': [{ from: 'H', to: '.', expect: 'unsolvable' }, { from: 'r', to: '.', expect: 'unsolvable' }],
   // r 换成地板：受控残影永远不走
   '12-1': [{ from: 'r', to: '.', expect: 'unsolvable' }],
-  '12-2': [{ from: 'r', to: '.', expect: 'unsolvable' }],
+  '12-2': [{ from: 'r', to: '.', expect: 'unsolvable' }, { from: 'Y', to: '#', expect: 'unsolvable' }],
+  '12-3': [{ from: 'r', to: '.', expect: 'unsolvable' }, { from: 'Y', to: '#', expect: 'unsolvable' }],
 };
 const substitute = (map: string[], from: string, to: string) => map.map((r) => [...r].map((c) => (from.includes(c) ? to : c)).join(''));
 
@@ -157,6 +163,9 @@ describe('关卡结构', () => {
 
   it('文案不用术语', () => {
     for (const l of LEVELS) expect(l.name + l.hint + (l.hints ?? []).join(''), l.id).not.toMatch(/拍|指令|Ghost|锚点|封存|录|收束/);
+    // 文案只描述玩家看得到的东西：不出现 S / Y / % / ( ) 这些只在地图源码里的字符
+    for (const l of LEVELS) expect(l.hint + (l.hints ?? []).join(''), l.id).not.toMatch(/(?<![A-Za-z])[SY](?![A-Za-z])|[%()]/);
+    for (const [id, e] of Object.entries(LEVEL_TEXT_EN)) expect(e.hint + ' ' + (e.hints ?? []).join(' '), id).not.toMatch(/(?<![A-Za-z])[SY](?![A-Za-z])|[%()]/);
     // 门和机关按颜色说（地图上只看得到颜色），不出现字母 A / a 这类说法
     for (const l of LEVELS) expect(l.hint + (l.hints ?? []).join(''), l.id).not.toMatch(/(?<![A-Za-z])[a-dA-D](?![A-Za-z])/);
     // 英文：A / a 也是冠词，所以只查“door A”“plate a”以及单独的 b、c、B、C、D
@@ -205,7 +214,8 @@ function solvableWithoutErase(def: LevelDef, maxNodes = 3_000_000): boolean | nu
 
 describe.each(LEVELS.filter((l) => l.chapter === 9).map((l) => [l.id, l] as const))('第 9 章 %s：落坑抹除是必需的', (_id, level) => {
   it('不允许抹除影子时无解', () => {
-    expect(solvableWithoutErase(level)).toBe(false);
+    // 9-4 每段能留 6 步，暴力枚举录像内容搜不完；它只用求解器的 forbidErase（已和暴力搜索在小图上对拍过）
+    if (level.id !== '9-4') expect(solvableWithoutErase(level)).toBe(false);
     // 求解器的 forbidErase 选项与暴力搜索结论一致
     expect(solve(level, { forbidErase: true }).status).toBe('unsolvable');
   });
@@ -257,6 +267,49 @@ describe.each(LEVELS.filter((l) => l.chapter === 12).map((l) => [l.id, l] as con
   });
   it('换成只能等一次的残影（⏸）也无解', () => {
     expect(solve(swap('⏸')).status).toBe('unsolvable');
+  });
+});
+
+
+describe('9-4：影子掉坑后名额空出来，可以再留一个', () => {
+  const l = () => LEVELS.find((x) => x.id === '9-4')!;
+  it('不允许回收名额就无解', () => {
+    expect(solve(l(), { forbidRecycle: true }).status).toBe('unsolvable');
+  });
+  it('参考解里第一个影子掉坑被抹除，之后又留了第二个', () => {
+    const w = runActions(l(), l().solution!).state.world;
+    const own = w.ghosts.filter((g) => !g.preset);
+    expect(own.length).toBe(2);
+    expect(own[0].gone).toBe(true);
+    expect(own[1].born).toBeGreaterThan(0);
+  });
+});
+
+describe('第 12 章：受控残影要和推 / 挡配合', () => {
+  const lv = (id: string) => LEVELS.find((x) => x.id === id)!;
+  // 12-1：受控残影停在路口当墙，挡住另一个残影；不让挡就过不去
+  it('12-1 受控残影得当墙：不能挡就无解', () => {
+    expect(solve(lv('12-1'), { forbidBlock: true }).status).toBe('unsolvable');
+  });
+  // 12-2：两个受控残影同进同停，必须从后面推粉色那个一下（白赚一步）；不推就过不去，挡没用
+  it('12-2 两个受控残影同进同停：不能推影子就无解', () => {
+    expect(solve(lv('12-2'), { forbidPush: ['p>g'] }).status).toBe('unsolvable');
+    expect(solve(lv('12-2'), { forbidBlock: true }).status).toBe('solved');
+  });
+  // 12-3：两个受控残影同进同停，必须挡住粉色那个一步；你没法一边踩 ▶ 一边挡，所以要留影
+  it('12-3 两个受控残影同进同停：不能挡、不留影都无解', () => {
+    expect(solve(lv('12-3'), { forbidBlock: true }).status).toBe('unsolvable');
+    expect(solveWithoutGhosts(lv('12-3')).status).toBe('unsolvable');
+  });
+  it('12-3 参考解里挡住粉色残影的是你留的影子', () => {
+    const l = lv('12-3');
+    const r = runActions(l, l.solution!);
+    const { board } = r;
+    const echo = r.state.world.ghosts[0];
+    const shadow = r.state.world.ghosts.find((g) => !g.preset)!;
+    // 影子停在粉色残影前面那一格（它的必经之路）上
+    expect(shadow.pos).toBe(echo.pos + 1);
+    expect(board.plates[echo.pos]).toBe(1);
   });
 });
 
